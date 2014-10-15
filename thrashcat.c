@@ -10,8 +10,7 @@
  *                                                                  *
  ********************************************************************
 
- function: simple example decoder
- last mod: $Id$
+ function: concatenate ogg/vorbis files/streams into single stream
 
 ********************************************************************/
 

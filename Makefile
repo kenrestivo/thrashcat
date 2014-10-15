@@ -17,6 +17,10 @@ clean::
 	rm -f ${TARGET} ${OBJS} *core
 
 
+install: ${TARGET}
+	sudo cp ${TARGET} /usr/local/bin/
+	sudo chown root:root /usr/local/bin/${TARGET}
+
 
 test: OUTFILE=/mnt/sdcard/to-other/why-no-archive/foo.ogg
 test: ${TARGET} 
