@@ -279,7 +279,6 @@ int main(){
 								op_out.bytes=op.bytes;
 								op_out.e_o_s=eos;
 								op_out.b_o_s = 0;
-								// TODO: this is broken
 								op_out.granulepos += op.granulepos - saved_granule; 
 
 								// now attempt to get it to emerge from the other side!
