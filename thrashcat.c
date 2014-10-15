@@ -10,6 +10,9 @@
  *                                                                  *
  ********************************************************************
 
+
+Modified (c) 2014 by ken restivo <ken@restivo.org>
+
  function: concatenate ogg/vorbis files/streams into single stream
 
 ********************************************************************/
