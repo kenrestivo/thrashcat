@@ -1,8 +1,8 @@
 #makefile BASED ON wheelhouse shells
 
-TARGET= decoder_example
+TARGET= thrashcat
 CC= gcc
-CFLAGS= -g -Wall  
+CFLAGS= -Wall   # -g
 LDFLAGS= -logg -lvorbis
 OBJS= ${TARGET}.o 
 
@@ -20,7 +20,7 @@ clean::
 
 test: OUTFILE=/mnt/sdcard/to-other/why-no-archive/foo.ogg
 test: ${TARGET} 
-	-(cat /mnt/sdcard/to-other/why-no-archive/2*ogg | ./decoder_example > ${OUTFILE})
+	-(cat /mnt/sdcard/to-other/why-no-archive/2*ogg | ./thrashcat > ${OUTFILE})
 	ls -la ${OUTFILE}
 	-oggz-validate ${OUTFILE}
 	-oggz-info ${OUTFILE}
@@ -29,7 +29,7 @@ test: ${TARGET}
 
 test1: OUTFILE=/mnt/sdcard/to-other/borkenoggs/foo.ogg
 test1: ${TARGET}
-	-(cat /mnt/sdcard/to-other/borkenoggs/2*ogg | ./decoder_example > ${OUTFILE})
+	-(cat /mnt/sdcard/to-other/borkenoggs/2*ogg | ./thrashcat > ${OUTFILE})
 	ls -la ${OUTFILE}
 	-oggz-validate ${OUTFILE}
 	-oggz-info ${OUTFILE}
