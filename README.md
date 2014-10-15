@@ -50,7 +50,7 @@ sudo make install
 
 ## The road not taken
 
-I tried writing something from scratch in Clojure using Gloss, but got stuck trying to figure out how to shoehorn things like the Vorbis CRC checking into Gloss's abstractions.
+I tried writing something from scratch in Clojure using Gloss, but got stuck trying to figure out how to shoehorn things like the Ogg page CRC checking into Gloss's abstractions.
 
 I also tried using Clojure and the Jorbis library, but performance was very slow. This doesn't need to be so heavyweight; a simple C utility should suffice.
 
@@ -58,6 +58,7 @@ I also tried using Clojure and the Jorbis library, but performance was very slow
 
 Modified 2014 by ken restivo <ken@restivo.org> , shamelessly stolen from decode_example.c and encode_example.c from vorbis source:
 
+```c
 ********************************************************************
 *                                                                  *
 * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
@@ -69,5 +70,5 @@ Modified 2014 by ken restivo <ken@restivo.org> , shamelessly stolen from decode_
 * by the Xiph.org Foundation, http://www.xiph.org/                 *
 *                                                                  *
 ********************************************************************
-
+```
 
