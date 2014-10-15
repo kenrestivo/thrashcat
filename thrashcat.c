@@ -84,6 +84,7 @@ int main(){
 	while(1){ /* we repeat if the bitstream is chained */
 		int eos=0;
 		int i;
+		int valid_info  = 1;
 		ogg_int64_t saved_granule = 0;
 
 		stream_count++; 
@@ -148,6 +149,7 @@ int main(){
 				eos=1;
 				goto error;
 			}
+			valid_info = 0;
 		}
 		/* At this point, we're sure we're Vorbis. We've set up the logical
 		   (Ogg) bitstream decoder. Get the comment and codebook headers and
@@ -319,7 +321,9 @@ int main(){
 	error:
 		ogg_stream_clear(&os);
 		vorbis_comment_clear(&vc);
-		vorbis_info_clear(&vi);  /* must be called last */
+		if(valid_info){
+			vorbis_info_clear(&vi);  /* must be called last */
+		}
 	}
 
 	{
