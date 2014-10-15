@@ -12,7 +12,7 @@ This is a problem because of the way liquidsoap works and the way the Ogg format
 
 There are other tools. In my experience, they don't work for the above use case.
 
-- oggCat sort of works but chokes horribly on files with streams that have a header and no data. It simply skips the whole file. Also there was an off-by-1 bug in oggCat which 
+- oggCat sort of works but chokes horribly on files with streams that have a header and no data. It simply skips the rest of the file (the part which probably has stuff you wanted to save in the first place). Also there was an off-by-1 bug in oggCat which  caused it to skip the first file given on the command line.
 - sox appears to either decode and recode the whole stream (absurd on a 6-hour DJ set), or in any case does the processing as if it were, which uses 99% CPU on a server VPS, which is not being a good VPS citizen.
 - There are hacks involving mplayer -ao pcm:file... and oggenc, but decoding and recoding offends my sense of efficiency, also burns up CPU on a VPS.
 
