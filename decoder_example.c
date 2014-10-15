@@ -23,6 +23,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include <math.h>
 #include <vorbis/codec.h>
 
@@ -35,42 +37,43 @@
 #include <console.h>      /* CodeWarrior's Mac "command-line" support */
 #endif
 
-ogg_int16_t convbuffer[4096]; /* take 8k out of the data segment, not the stack */
-int convsize=4096;
+#define BUF_SIZ 4096
+
+ogg_int16_t convbuffer[BUF_SIZ]; /* take 8k out of the data segment, not the stack */
+int convsize=BUF_SIZ;
 
 extern void _VDBG_dump(void);
 
 int main(){
 	ogg_sync_state   oy; /* sync and verify incoming physical bitstream */
+
+	ogg_stream_state os_out; // outgoing bitstream
 	ogg_stream_state os; /* take physical pages, weld into a logical
 				stream of packets */
 	ogg_page         og; /* one Ogg bitstream page. Vorbis packets are inside */
+	ogg_page         og_out;
+
 	ogg_packet       op; /* one raw packet of data for decode */
+	ogg_packet       op_out;
 
 	vorbis_info      vi; /* struct that stores all the static vorbis bitstream
 				settings */
+
 	vorbis_comment   vc; /* struct that stores all the bitstream user comments */
-	vorbis_dsp_state vd; /* central working state for the packet->PCM decoder */
+
 	vorbis_block     vb; /* local working space for packet->PCM decode */
+	vorbis_dsp_state vd; /* central working state for the packet->PCM decoder */
 
 	char *buffer;
 	int  bytes;
+	int stream_count; // keep track of how many chained streams
 
-#ifdef _WIN32 /* We need to set stdin/stdout to binary mode. Damn windows. */
-	/* Beware the evil ifdef. We avoid these where we can, but this one we
-	   cannot. Don't add any more, you'll probably go to hell if you do. */
-	_setmode( _fileno( stdin ), _O_BINARY );
-	_setmode( _fileno( stdout ), _O_BINARY );
-#endif
 
-#if defined(macintosh) && defined(__MWERKS__)
-	{
-		int argc;
-		char **argv;
-		argc=ccommand(&argv); /* get a "command line" from the Mac user */
-		/* this also lets the user set stdin and stdout */
-	}
-#endif
+	// encode setup
+	srand(time(NULL));
+	ogg_stream_init(&os_out,rand());
+
+
 
 	/********** Decode setup ************/
 
@@ -79,6 +82,9 @@ int main(){
 	while(1){ /* we repeat if the bitstream is chained */
 		int eos=0;
 		int i;
+		ogg_int64_t saved_granule = 0;
+
+		stream_count++; 
 
 		/* grab some data at the head of the stream. We want the first page
 		   (which is guaranteed to be small and only contain the Vorbis
@@ -86,20 +92,21 @@ int main(){
 		   serialno. */
 
 		/* submit a 4k block to libvorbis' Ogg layer */
-		buffer=ogg_sync_buffer(&oy,4096);
-		bytes=fread(buffer,1,4096,stdin);
+		buffer=ogg_sync_buffer(&oy,BUF_SIZ);
+		bytes=fread(buffer,1,BUF_SIZ,stdin);
 		ogg_sync_wrote(&oy,bytes);
     
 		/* Get the first page. */
 		if(ogg_sync_pageout(&oy,&og)!=1){
 			/* have we simply run out of data?  If so, we're done. */
-			if(bytes<4096)break;
+			if(bytes<BUF_SIZ)break;
       
 			/* error case.  Must not be Vorbis data */
 			fprintf(stderr,"Input does not appear to be an Ogg bitstream.\n");
-			exit(1);
+			eos=1;
+			goto error;
 		}
-  
+
 		/* Get the serial number and set up the rest of decode. */
 		/* serialno first; use it to set up a logical stream */
 		ogg_stream_init(&os,ogg_page_serialno(&og));
@@ -114,29 +121,41 @@ int main(){
     
 		vorbis_info_init(&vi);
 		vorbis_comment_init(&vc);
-		if(ogg_stream_pagein(&os,&og)<0){ 
-			/* error; stream version mismatch perhaps */
-			fprintf(stderr,"Error reading first page of Ogg bitstream data.\n");
-			exit(1);
-		}
+
+		// this is all just the first packet!
+		{
+			if(ogg_stream_pagein(&os,&og)<0){ 
+				/* error; stream version mismatch perhaps */
+				fprintf(stderr,"Error reading first page of Ogg bitstream data.\n");
+				eos=1;
+				goto error;
+
+ 			}
     
-		if(ogg_stream_packetout(&os,&op)!=1){ 
-			/* no page? must not be vorbis */
-			fprintf(stderr,"Error reading initial header packet.\n");
-			exit(1);
-		}
+			if(ogg_stream_packetout(&os,&op)!=1){ 
+				/* no page? must not be vorbis */
+				fprintf(stderr,"Error reading initial header packet.\n");
+				eos=1;
+				goto error;
+			}
     
-		if(vorbis_synthesis_headerin(&vi,&vc,&op)<0){ 
-			/* error case; not a vorbis header */
-			fprintf(stderr,"This Ogg bitstream does not contain Vorbis "
-				"audio data.\n");
-			exit(1);
+			if(vorbis_synthesis_headerin(&vi,&vc,&op)<0){ 
+				/* error case; not a vorbis header */
+				fprintf(stderr,"This Ogg bitstream does not contain Vorbis "
+					"audio data.\n");
+				eos=1;
+				goto error;
+			}
 		}
-    
 		/* At this point, we're sure we're Vorbis. We've set up the logical
 		   (Ogg) bitstream decoder. Get the comment and codebook headers and
 		   set up the Vorbis decoder */
     
+		if(stream_count == 1){
+			memcpy(&op_out, &op, sizeof(op));
+			ogg_stream_packetin(&os_out,&op_out);
+		}
+
 		/* The next two packets in order are the comment and codebook headers.
 		   They're likely large and may span multiple pages. Thus we read
 		   and submit data until we get our two packets, watching that no
@@ -161,152 +180,160 @@ int main(){
 							/* Uh oh; data at some point was corrupted or missing!
 							   We can't tolerate that in a header.  Die. */
 							fprintf(stderr,"Corrupt secondary header.  Exiting.\n");
-							exit(1);
+							eos=1;
+							goto error;
+
 						}
 						result=vorbis_synthesis_headerin(&vi,&vc,&op);
 						if(result<0){
 							fprintf(stderr,"Corrupt secondary header.  Exiting.\n");
-							exit(1);
+							eos=1;
+							goto error;
+
+						}
+						if(stream_count == 1){
+							memcpy(&op_out, &op, sizeof(op));
+							ogg_stream_packetin(&os_out,&op_out);
 						}
 						i++;
 					}
 				}
 			}
 			/* no harm in not checking before adding more */
-			buffer=ogg_sync_buffer(&oy,4096);
-			bytes=fread(buffer,1,4096,stdin);
+			buffer=ogg_sync_buffer(&oy,BUF_SIZ);
+			bytes=fread(buffer,1,BUF_SIZ,stdin);
 			if(bytes==0 && i<2){
 				fprintf(stderr,"End of file before finding all Vorbis headers!\n");
-				exit(1);
+				eos=1;
 			}
 			ogg_sync_wrote(&oy,bytes);
 		}
-    
+
+		while(!eos){ // really, a while true, but with a safety hatch
+			int result=ogg_stream_flush(&os_out, &og_out);
+			if(result==0)break;
+			fwrite(og_out.header, 1, og_out.header_len, stdout);
+			fwrite(og_out.body, 1, og_out.body_len, stdout);
+		
+
+		}
+
 		/* Throw the comments plus a few lines about the bitstream we're
 		   decoding */
 		{
+			fprintf(stderr, "\nStream #%d, serialno %ld\n", stream_count, os.serialno);
+			fprintf(stderr,"Bitstream is %d channel, %ldHz\n",vi.channels,vi.rate);
+			fprintf(stderr,"Encoded by: %s\n",vc.vendor);
+
 			char **ptr=vc.user_comments;
-			while(*ptr){
-				fprintf(stderr,"%s\n",*ptr);
+			while(ptr && *ptr){
+				fprintf(stderr,"\t%s\n",*ptr);
 				++ptr;
 			}
-			fprintf(stderr,"\nBitstream is %d channel, %ldHz\n",vi.channels,vi.rate);
-			fprintf(stderr,"Encoded by: %s\n\n",vc.vendor);
 		}
-    
-		convsize=4096/vi.channels;
-
-		/* OK, got and parsed all three headers. Initialize the Vorbis
-		   packet->PCM decoder. */
-		if(vorbis_synthesis_init(&vd,&vi)==0){ /* central decode state */
-			vorbis_block_init(&vd,&vb);          /* local state for most of the decode
-								so multiple block decodes can
-								proceed in parallel. We could init
-								multiple vorbis_block structures
-								for vd here */
+		
       
-			/* The rest is just a straight decode loop until end of stream */
+
+
+		/// all headers done
+
+		if(vorbis_synthesis_init(&vd,&vi)==0){ /* central decode state */
+			//local state for most of the decode
+			vorbis_block_init(&vd,&vb);         
+		}
+
+
+		/* The rest is just a straight decode loop until end of stream */
+		while(!eos){
 			while(!eos){
-				while(!eos){
-					int result=ogg_sync_pageout(&oy,&og);
-					if(result==0)break; /* need more data */
-					if(result<0){ /* missing or corrupt data at this page position */
-						fprintf(stderr,"Corrupt or missing data in bitstream; "
-							"continuing...\n");
-					}else{
-						ogg_stream_pagein(&os,&og); /* can safely ignore errors at
-									       this point */
-						while(1){
-							result=ogg_stream_packetout(&os,&op);
+				//fprintf(stderr, "\tpageout\n");
+				int result=ogg_sync_pageout(&oy,&og);
+				if(result==0)break; /* need more data */
+				if(result<0){ /* missing or corrupt data at this page position */
+					fprintf(stderr,"Corrupt or missing data in bitstream; "
+						"continuing...\n");
+				}else{
+					//fprintf(stderr, "\t\tpagein\n");
+					ogg_stream_pagein(&os,&og); /* can safely ignore errors at
+								       this point */
+					while(1){
+						saved_granule = op.granulepos;
+						result=ogg_stream_packetout(&os,&op);
+						//fprintf(stderr, "\t\t\tquux!\n");
               
-							if(result==0)break; /* need more data */
-							if(result<0){ /* missing or corrupt data at this page position */
-								/* no reason to complain; already complained above */
-							}else{
-								/* we have a packet.  Decode it */
-								float **pcm;
-								int samples;
-                
-								if(vorbis_synthesis(&vb,&op)==0) /* test for success! */
-									vorbis_synthesis_blockin(&vd,&vb);
-								/* 
-                   
-								**pcm is a multichannel float vector.  In stereo, for
-								example, pcm[0] is left, and pcm[1] is right.  samples is
-								the size of each channel.  Convert the float values
-								(-1.<=range<=1.) to whatever PCM format and write it out */
-                
-								while((samples=vorbis_synthesis_pcmout(&vd,&pcm))>0){
-									int j;
-									int clipflag=0;
-									int bout=(samples<convsize?samples:convsize);
-                  
-									/* convert floats to 16 bit signed ints (host order) and
-									   interleave */
-									for(i=0;i<vi.channels;i++){
-										ogg_int16_t *ptr=convbuffer+i;
-										float  *mono=pcm[i];
-										for(j=0;j<bout;j++){
-#if 1
-											int val=floor(mono[j]*32767.f+.5f);
-#else /* optional dither */
-											int val=mono[j]*32767.f+drand48()-0.5f;
-#endif
-											/* might as well guard against clipping */
-											if(val>32767){
-												val=32767;
-												clipflag=1;
-											}
-											if(val<-32768){
-												val=-32768;
-												clipflag=1;
-											}
-											*ptr=val;
-											ptr+=vi.channels;
-										}
-									}
-                  
-									if(clipflag)
-										fprintf(stderr,"Clipping in frame %ld\n",(long)(vd.sequence));
-                  
-                  
-									fwrite(convbuffer,2*vi.channels,bout,stdout);
-                  
-									vorbis_synthesis_read(&vd,bout); /* tell libvorbis how
-													    many samples we
-													    actually consumed */
-								}            
+						if(result==0)break; /* need more data */
+						if(result<0){ /* missing or corrupt data at this page position */
+							/* no reason to complain; already complained above */
+						}else{
+							/* we have a packet.  copy it */
+
+							/* test for success! 
+							   use the trackonly because we don't want
+							   to decode the whole thing, just make sure
+							   it's valid audio
+							*/
+							if(vorbis_synthesis_trackonly(&vb,&op)==0){ 
+								memcpy(op_out.packet, op.packet, op.bytes);
+								op_out.bytes=op.bytes;
+								op_out.e_o_s=eos;
+								op_out.b_o_s = 0;
+								// TODO: this is broken
+								op_out.granulepos += op.granulepos - saved_granule; 
+
+								// now attempt to get it to emerge from the other side!
+								ogg_stream_packetin(&os_out, &op_out);
+								//fprintf(stderr, "\t\t\t\tbleh!\n");
+							
+								while(!eos){
+									int result=ogg_stream_pageout(&os_out,&og_out);
+									if(result==0)break;
+									fwrite(og_out.header,1,og_out.header_len,stdout);
+									fwrite(og_out.body,1,og_out.body_len,stdout);
+									//fprintf(stderr, "writing audio data\n");
+									/* this could be set above, but for illustrative purposes, I do
+									   it here (to show that vorbis does know where the stream ends) */
+								}
 							}
+
+
 						}
-						if(ogg_page_eos(&og))eos=1;
 					}
+					if(ogg_page_eos(&og))eos=1;
 				}
-				if(!eos){
-					buffer=ogg_sync_buffer(&oy,4096);
-					bytes=fread(buffer,1,4096,stdin);
-					ogg_sync_wrote(&oy,bytes);
-					if(bytes==0)eos=1;
-				}
+			}
+			if(!eos){
+				buffer=ogg_sync_buffer(&oy,BUF_SIZ);
+				bytes=fread(buffer,1,BUF_SIZ,stdin);
+				ogg_sync_wrote(&oy,bytes);
+				if(bytes==0)eos=1;
 			}
       
 			/* ogg_page and ogg_packet structs always point to storage in
 			   libvorbis.  They're never freed or manipulated directly */
       
-			vorbis_block_clear(&vb);
-			vorbis_dsp_clear(&vd);
-		}else{
-			fprintf(stderr,"Error: Corrupt header during playback initialization.\n");
 		}
 
 		/* clean up this logical bitstream; before exit we see if we're
 		   followed by another [chained] */
-    
+	error:
 		ogg_stream_clear(&os);
 		vorbis_comment_clear(&vc);
 		vorbis_info_clear(&vi);  /* must be called last */
 	}
 
-	/* OK, clean up the framer */
+	{
+		op_out.e_o_s = 1;
+		/// TODO: to avoid clicks, maybe zero out the packet data of the last packet?
+		os_out.e_o_s = 1;
+		int result=ogg_stream_pageout(&os_out,&og_out);
+		if(result!= 0){
+			fwrite(og_out.header,1,og_out.header_len,stdout);
+			fwrite(og_out.body,1,og_out.body_len,stdout);
+		}
+	}
+	ogg_stream_clear(&os_out);
+
+/* OK, clean up the framer */
 	ogg_sync_clear(&oy);
   
 	fprintf(stderr,"Done.\n");
