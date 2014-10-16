@@ -70,6 +70,7 @@ int main(){
 	int  bytes;
 	int stream_count; // keep track of how many chained streams
 
+	ogg_int64_t saved_granule = 0;
 
 	// encode setup
 	srand(time(NULL));
@@ -85,7 +86,6 @@ int main(){
 		int eos=0;
 		int i;
 		int valid_info  = 1;
-		ogg_int64_t saved_granule = 0;
 
 		stream_count++; 
 
@@ -261,7 +261,6 @@ int main(){
 					ogg_stream_pagein(&os,&og); /* can safely ignore errors at
 								       this point */
 					while(1){
-						saved_granule = op.granulepos;
 						result=ogg_stream_packetout(&os,&op);
 						//fprintf(stderr, "\t\t\tquux!\n");
               
@@ -277,16 +276,24 @@ int main(){
 							   it's valid audio
 							*/
 							if(vorbis_synthesis_trackonly(&vb,&op)==0){ 
+								saved_granule += vorbis_packet_blocksize(&vi, &op);
 								memcpy(op_out.packet, op.packet, op.bytes);
 								op_out.bytes=op.bytes;
 								op_out.e_o_s=eos;
 								op_out.b_o_s = 0;
-								op_out.granulepos += op.granulepos - saved_granule; 
-
+								op_out.granulepos = saved_granule;  
+								/*
+								  fprintf(stderr, "in packet granule: %ld, saved granule: %ld inpacket granule: %ld\n", 
+									saved_granule,
+									op.granulepos);
+								*/
 								// now attempt to get it to emerge from the other side!
 								ogg_stream_packetin(&os_out, &op_out);
 								//fprintf(stderr, "\t\t\t\tbleh!\n");
 							
+								
+								// gets the new granulepos
+
 								while(!eos){
 									int result=ogg_stream_pageout(&os_out,&og_out);
 									if(result==0)break;
