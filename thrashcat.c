@@ -265,7 +265,7 @@ int main(){
 							os.body_returned,
 							os.body_fill,
 							os.packetno);
-						goto skip_packet;
+						goto error;
 					}
 
 					ogg_stream_pagein(&os,&og); /* can safely ignore errors at
@@ -318,7 +318,6 @@ int main(){
 
 						}
 					}
-				skip_packet:
 					if(ogg_page_eos(&og))eos=1;
 				}
 			}
