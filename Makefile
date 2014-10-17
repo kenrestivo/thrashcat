@@ -2,7 +2,7 @@
 
 TARGET= thrashcat
 CC= gcc
-CFLAGS= -Wall   -g
+CFLAGS= -Wall   -g 
 LDFLAGS= -logg -lvorbis
 OBJS= ${TARGET}.o 
 
@@ -44,7 +44,7 @@ borkinfo::
 
 test2: OUTFILE=/mnt/sdcard/tmp//2014-10-05-foobarbut.ogg
 test2: ${TARGET}
-	-(cat /mnt/sdcard/to-other/borkenoggs/2014-10-05-15_53_55-foobarbut.ogg | thrashcat > ${OUTFILE})
+	-(cat /mnt/sdcard/to-other/borkenoggs/2014-10-05-15_53_55-foobarbut.ogg | ./thrashcat > ${OUTFILE})
 	-ls -la ${OUTFILE}
 	-oggz-validate ${OUTFILE}
 	-oggz-info ${OUTFILE}

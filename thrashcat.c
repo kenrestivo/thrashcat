@@ -30,6 +30,7 @@ Modified (c) 2014 by ken restivo <ken@restivo.org>
 #include <math.h>
 #include <vorbis/codec.h>
 
+
 #ifdef _WIN32 /* We need the following two to set stdin/stdout to binary */
 #include <io.h>
 #include <fcntl.h>
@@ -85,7 +86,7 @@ int main(){
 	while(1){ /* we repeat if the bitstream is chained */
 		int eos=0;
 		int i;
-		int valid_info  = 1;
+		int valid_info  = 0;
 
 		stream_count++; 
 
@@ -149,7 +150,7 @@ int main(){
 				eos=1;
 				goto error;
 			}
-			valid_info = 0;
+			valid_info = 1;
 		}
 		/* At this point, we're sure we're Vorbis. We've set up the logical
 		   (Ogg) bitstream decoder. Get the comment and codebook headers and
@@ -256,8 +257,17 @@ int main(){
 				if(result<0){ /* missing or corrupt data at this page position */
 					fprintf(stderr,"Corrupt or missing data in bitstream; "
 						"continuing...\n");
+					// TODO: continue; ??
 				}else{
-					//fprintf(stderr, "\t\tpagein\n");
+					// hack around bug in libogg1.3 debian
+					if((os.body_returned - os.body_fill) > 0){
+						fprintf(stderr, "Invalid body returned %ld > than body fill %ld at packetno %ld\n",
+							os.body_returned,
+							os.body_fill,
+							os.packetno);
+						goto error;
+					}
+
 					ogg_stream_pagein(&os,&og); /* can safely ignore errors at
 								       this point */
 					while(1){
@@ -284,13 +294,13 @@ int main(){
 								op_out.granulepos = saved_granule;  
 								/*
 								  fprintf(stderr, "in packet granule: %ld, saved granule: %ld inpacket granule: %ld\n", 
-									saved_granule,
-									op.granulepos);
+								  saved_granule,
+								  op.granulepos);
 								*/
 								// now attempt to get it to emerge from the other side!
-								ogg_stream_packetin(&os_out, &op_out);
 								//fprintf(stderr, "\t\t\t\tbleh!\n");
-							
+
+								ogg_stream_packetin(&os_out, &op_out);
 								
 								// gets the new granulepos
 
@@ -328,7 +338,7 @@ int main(){
 	error:
 		ogg_stream_clear(&os);
 		vorbis_comment_clear(&vc);
-		if(valid_info){
+		if(!valid_info){
 			vorbis_info_clear(&vi);  /* must be called last */
 		}
 	}
