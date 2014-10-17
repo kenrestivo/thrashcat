@@ -90,3 +90,12 @@ test5: ${TARGET}
 	-oggz-validate ${OUTFILE}
 	-oggz-info ${OUTFILE}
 	-ogginfo ${OUTFILE}
+
+test6: OUTFILE=/mnt/sdcard/tmp/2014-10-15-esoundc.ogg
+test6: ${TARGET}
+	-(cat /mnt/sdcard/to-other/moreborkens/2014-10-15-11_09_34.ogg /mnt/sdcard/to-other/moreborkens/2014-10-15-11_32_06.ogg /mnt/sdcard/to-other/moreborkens/2014-10-15-19_33_12-.ogg | ./thrashcat > ${OUTFILE})
+	ls -la ${OUTFILE}
+	-oggz-validate ${OUTFILE}
+	-oggz-info ${OUTFILE}
+	-ogginfo ${OUTFILE}
+
