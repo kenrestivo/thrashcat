@@ -286,7 +286,8 @@ int main(){
 							   it's valid audio
 							*/
 							if(vorbis_synthesis_trackonly(&vb,&op)==0){ 
-								saved_granule += vorbis_packet_blocksize(&vi, &op);
+								// TODO: see if there's a cleaner way to do this
+								saved_granule += vorbis_packet_blocksize(&vi, &op) / vi.channels;
 								memcpy(op_out.packet, op.packet, op.bytes);
 								op_out.bytes=op.bytes;
 								op_out.e_o_s=eos;
