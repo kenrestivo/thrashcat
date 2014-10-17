@@ -336,7 +336,7 @@ int main(){
 		/* clean up this logical bitstream; before exit we see if we're
 		   followed by another [chained] */
 	error:
-		ogg_stream_clear(&os);
+		ogg_stream_reset(&os);
 		vorbis_comment_clear(&vc);
 		if(!valid_info){
 			vorbis_info_clear(&vi);  /* must be called last */
