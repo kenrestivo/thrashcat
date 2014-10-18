@@ -22,8 +22,8 @@ install: ${TARGET}
 	sudo chown root:root /usr/local/bin/${TARGET}
 
 
-test: OUTFILE=/mnt/sdcard/to-other/why-no-archive/foo.ogg
-test: ${TARGET} 
+test0: OUTFILE=/mnt/sdcard/to-other/why-no-archive/foo.ogg
+test0: ${TARGET} 
 	echo "TEST"
 	-(cat /mnt/sdcard/to-other/why-no-archive/2*ogg | ./${TARGET} > ${OUTFILE})
 	ls -la ${OUTFILE}
@@ -108,4 +108,4 @@ test6: ${TARGET}
 	-ogginfo ${OUTFILE}
 
 
-all-tests: test1 test2 test3 test3-pipe test4 test5 test6
+test: test0 test1 test2 test3 test3-pipe test4 test5 test6
