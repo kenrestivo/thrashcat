@@ -316,7 +316,8 @@ int main(){
 									   it here (to show that vorbis does know where the stream ends) */
 								}
 							} else {
-								fprintf(stderr, "invalid synthesis at granule %ld page %ld\n", op.granulepos, os.pageno);
+								fprintf(stderr, "invalid synthesis at granule %ld page %ld\n",
+									op.granulepos, os.pageno);
 							}
 
 
