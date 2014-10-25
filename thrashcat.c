@@ -226,7 +226,8 @@ int main(){
 		/* Throw the comments plus a few lines about the bitstream we're
 		   decoding */
 		{
-			fprintf(stderr, "\nStream #%d, serialno %ld\n", stream_count, os.serialno);
+			fprintf(stderr, "\nStream #%d, serialno %ld (%0x)\n", 
+				stream_count, os.serialno, os.serialno);
 			fprintf(stderr,"Bitstream is %d channel, %ldHz\n",vi.channels,vi.rate);
 			fprintf(stderr,"Encoded by: %s\n",vc.vendor);
 
