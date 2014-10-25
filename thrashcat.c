@@ -77,7 +77,7 @@ int main(){
 	srand(time(NULL));
 	ogg_stream_init(&os_out,rand());
 
-
+	int track_res;
 
 	/********** Decode setup ************/
 
@@ -286,7 +286,12 @@ int main(){
 							   to decode the whole thing, just make sure
 							   it's valid audio
 							*/
-							if(vorbis_synthesis_trackonly(&vb,&op)==0){ 
+							if((track_res = vorbis_synthesis_trackonly(&vb,&op)) != 0){
+								fprintf(stderr, "invalid synthesis at granule %ld page %ld : %s\n",
+									op.granulepos, os.pageno,
+									track_res == OV_ENOTAUDIO ? "not an audio packet" : "bad, bad packet" );
+							} else {
+
 								// TODO: see if there's a cleaner way to do this
 								saved_granule += vorbis_packet_blocksize(&vi, &op) / vi.channels;
 								memcpy(op_out.packet, op.packet, op.bytes);
@@ -315,10 +320,7 @@ int main(){
 									/* this could be set above, but for illustrative purposes, I do
 									   it here (to show that vorbis does know where the stream ends) */
 								}
-							} else {
-								fprintf(stderr, "invalid synthesis at granule %ld page %ld\n",
-									op.granulepos, os.pageno);
-							}
+							}  
 
 
 						}
