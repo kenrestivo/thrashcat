@@ -108,4 +108,15 @@ test6: ${TARGET}
 	-ogginfo ${OUTFILE}
 
 
-test: test0 test1 test2 test3 test3-pipe test4 test5 test6
+
+test7: OUTFILE=/mnt/sdcard/tmp/2014-10-23-damfree.ogg
+test7: ${TARGET}
+	echo "TEST 7"
+	-(cat   /mnt/sdcard/to-other/glitchycats/2014-10-23-20_09_03-Spukkin_Faceships_Fukkin_Spaceship.ogg /mnt/sdcard/to-other/glitchycats/2014-10-23-21_01_49-Spukkin_Faceships_Fukkin_Spaceship.ogg | ./${TARGET} > ${OUTFILE})
+	ls -la ${OUTFILE}
+	-oggz-validate ${OUTFILE}
+	-oggz-info ${OUTFILE}
+	-ogginfo ${OUTFILE}
+
+
+test: test0 test1 test2 test3 test3-pipe test4 test5 test6 test7 3
