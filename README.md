@@ -16,6 +16,11 @@ There are other tools for contatenating ogg-vorbis files. In my experience, they
 - oggCat sort of works but chokes on files with streams that have a header and no data, or otherwise corrupt data. It simply skips the rest of the file (the part which probably has stuff you wanted to save in the first place, since the corruption created by liquidsoap is usually at the first stream). Also there was an off-by-1 bug in oggCat which  caused it to skip the first file given on the command line; I tried to fix it but found the code difficult to follow.
 - sox appears to either decode and recode the whole stream (absurd on a 6-hour DJ set), or in any case does the processing as if it were, which uses 99% CPU on a server VPS, which is not ideal.
 - There are hacks involving mplayer -ao pcm:file... and oggenc, but again since it involves decoding/recoding there are CPU usage problems on small VPSs.
+- ffmpeg blows up on chained streams, with stuff like
+```
+[ogg @ 0x1d265e0] Application provided invalid, non monotonically increasing dts to muxer in stream 0: 31181568 >= 0
+av_interleaved_write_frame(): Invalid argument
+```
 
 ## Requirements
 
