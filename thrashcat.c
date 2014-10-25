@@ -287,8 +287,8 @@ int main(){
 							   it's valid audio
 							*/
 							if((track_res = vorbis_synthesis_trackonly(&vb,&op)) != 0){
-								fprintf(stderr, "invalid synthesis at granule %ld page %ld : %s\n",
-									op.granulepos, os.pageno,
+								fprintf(stderr, "invalid synthesis at granule %ld page %ld  packet %ld : %s\n",
+									op.granulepos, os.pageno, os.packetno,
 									track_res == OV_ENOTAUDIO ? "not an audio packet" : "bad, bad packet" );
 							} else {
 
