@@ -276,7 +276,7 @@ int main(){
               
 						if(result==0)break; /* need more data */
 						if(result<0){ /* missing or corrupt data at this page position */
-							/* no reason to complain; already complained above */
+							fprintf(stderr, "complaining, missing or corrupt data %ld\n", os.pageno);
 						}else{
 							/* we have a packet.  copy it */
 
@@ -314,6 +314,8 @@ int main(){
 									/* this could be set above, but for illustrative purposes, I do
 									   it here (to show that vorbis does know where the stream ends) */
 								}
+							} else {
+								fprintf(stderr, "invalid synthesis at granule %ld page %d\n", op.granulepos, os.pageno);
 							}
 
 
