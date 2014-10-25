@@ -226,7 +226,7 @@ int main(){
 		/* Throw the comments plus a few lines about the bitstream we're
 		   decoding */
 		{
-			fprintf(stderr, "\nStream #%d, serialno %ld (%0x)\n", 
+			fprintf(stderr, "\nStream #%d, serialno %ld (%0lx)\n", 
 				stream_count, os.serialno, os.serialno);
 			fprintf(stderr,"Bitstream is %d channel, %ldHz\n",vi.channels,vi.rate);
 			fprintf(stderr,"Encoded by: %s\n",vc.vendor);
@@ -316,7 +316,7 @@ int main(){
 									   it here (to show that vorbis does know where the stream ends) */
 								}
 							} else {
-								fprintf(stderr, "invalid synthesis at granule %ld page %d\n", op.granulepos, os.pageno);
+								fprintf(stderr, "invalid synthesis at granule %ld page %ld\n", op.granulepos, os.pageno);
 							}
 
 
