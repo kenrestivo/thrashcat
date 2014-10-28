@@ -2,6 +2,10 @@
 
 A tool for robustly concatenating Ogg Vorbis streams and files into a single Ogg Vorbis stream.
 
+## Status
+
+WARNING: Turns out this approach is broken too. In fact there may not even be a way to concatenate ogg streams with 100% reliability, without decoding/recoding. The rewrite branch is the a from-scratch redo, to attempt to figure out what is wrong. This tool is no longer in use.
+
 ## Why??
 
 Because I'm using Liquidsoap to dump incoming DJ streams in Ogg format, using output.file, with reopen_on_metadata, and with %Y-%m-%d filenames. Combining all these means Trouble.
